@@ -5,6 +5,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserOut
 from app.core.security import verify_password, create_access_token
+from app.core.logger import write_log
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,6 +20,16 @@ def login(payload: dict, db: Session = Depends(get_db)):
         raise HTTPException(401, "Incorrect email or password")
 
     token = create_access_token(subject=user.email, role=user.role.value)
+
+    # Log login
+    write_log(
+        db=db,
+        user_email=user.email,
+        action="Login",
+        module="auth",
+        ref_id=None,
+        details="User logged in"
+    )
 
     return {
         "access_token": token,
