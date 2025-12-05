@@ -2,10 +2,8 @@ from datetime import datetime
 import time
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from app.api.deps import get_current_user, require_admin, require_roles
 
-from app.api.deps import get_current_user, require_admin
 from app.db.session import get_db
 from app.models import (
     PurchaseOrder,
@@ -24,9 +22,20 @@ from app.schemas.purchasing import (
     GoodsReceiptCreate,
     GoodsReceiptOut,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 
 router = APIRouter()
+
+ALLOWED_PURCHASING_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+    UserRole.purchasing,
+]
+
+ALLOWED_PURCHASING_APPROVE_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+]
 
 
 # ====== 工具函式：產生單號 ======
@@ -108,7 +117,7 @@ def apply_receipt_to_inventory(
 def create_po(
     data: PurchaseOrderCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
 ):
     # 建 PO 主檔
     po = PurchaseOrder(
@@ -143,7 +152,7 @@ def create_po(
 @router.get("/purchase-orders", response_model=List[PurchaseOrderOut])
 def list_po(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
     vendor_id: int | None = Query(None),
     status: POStatus | None = Query(None),
 ):
@@ -159,7 +168,7 @@ def list_po(
 def get_po(
     po_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
 ):
     po = db.query(PurchaseOrder).get(po_id)
     if not po:
@@ -171,7 +180,7 @@ def get_po(
 def approve_po(
     po_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_APPROVE_ROLES)),
 ):
     po = db.query(PurchaseOrder).get(po_id)
     if not po:
@@ -191,7 +200,7 @@ def approve_po(
 def create_gr(
     data: GoodsReceiptCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
 ):
     gr = GoodsReceipt(
         gr_number=generate_gr_number(),
@@ -225,7 +234,7 @@ def create_gr(
 @router.get("/goods-receipts", response_model=List[GoodsReceiptOut])
 def list_gr(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
     po_id: int | None = Query(None),
     status: GRStatus | None = Query(None),
 ):
@@ -241,7 +250,7 @@ def list_gr(
 def get_gr(
     gr_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_ROLES)),
 ):
     gr = db.query(GoodsReceipt).get(gr_id)
     if not gr:
@@ -253,7 +262,7 @@ def get_gr(
 def post_gr(
     gr_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_PURCHASING_APPROVE_ROLES)),
 ):
     gr = db.query(GoodsReceipt).get(gr_id)
     if not gr:

@@ -3,22 +3,29 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_roles
 from app.db.session import get_db
 from app.models import InventoryTransaction, InventoryBalance
 from app.schemas.inventory import (
     InventoryTransactionOut,
     InventoryBalanceOut,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 
 router = APIRouter()
+
+ALLOWED_INVENTORY_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+    UserRole.sales,
+    UserRole.purchasing,
+]
 
 
 @router.get("/transactions", response_model=List[InventoryTransactionOut])
 def list_transactions(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_INVENTORY_ROLES)),
     item_id: int | None = Query(None),
     warehouse_id: int | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
@@ -35,7 +42,7 @@ def list_transactions(
 @router.get("/balances", response_model=List[InventoryBalanceOut])
 def list_balances(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_INVENTORY_ROLES)),
     item_id: int | None = Query(None),
     warehouse_id: int | None = Query(None),
 ):

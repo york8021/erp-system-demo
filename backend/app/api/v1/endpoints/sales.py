@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import get_current_user, require_admin, require_roles
 from app.db.session import get_db
 from app.models import (
     SalesOrder,
@@ -24,9 +24,20 @@ from app.schemas.sales import (
     ShipmentCreate,
     ShipmentOut,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 
 router = APIRouter()
+
+ALLOWED_SALES_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+    UserRole.sales,
+]
+
+ALLOWED_SALES_APPROVE_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+]
 
 
 # ====== 單號產生 ======
@@ -102,7 +113,7 @@ def apply_issue_to_inventory(
 def create_so(
     data: SalesOrderCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
 ):
     so = SalesOrder(
         so_number=generate_so_number(),
@@ -135,7 +146,7 @@ def create_so(
 @router.get("/sales-orders", response_model=List[SalesOrderOut])
 def list_so(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
     customer_id: int | None = Query(None),
     status: SOStatus | None = Query(None),
 ):
@@ -151,7 +162,7 @@ def list_so(
 def get_so(
     so_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
 ):
     so = db.query(SalesOrder).get(so_id)
     if not so:
@@ -163,7 +174,7 @@ def get_so(
 def approve_so(
     so_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_SALES_APPROVE_ROLES)),
 ):
     so = db.query(SalesOrder).get(so_id)
     if not so:
@@ -183,7 +194,7 @@ def approve_so(
 def create_shipment(
     data: ShipmentCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
 ):
     shp = Shipment(
         shipment_number=generate_shipment_number(),
@@ -215,7 +226,7 @@ def create_shipment(
 @router.get("/shipments", response_model=List[ShipmentOut])
 def list_shipments(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
     so_id: int | None = Query(None),
     status: ShipmentStatus | None = Query(None),
 ):
@@ -231,7 +242,7 @@ def list_shipments(
 def get_shipment(
     shipment_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(ALLOWED_SALES_ROLES)),
 ):
     shp = db.query(Shipment).get(shipment_id)
     if not shp:
@@ -243,7 +254,7 @@ def get_shipment(
 def post_shipment(
     shipment_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_SALES_APPROVE_ROLES)),
 ):
     shp = db.query(Shipment).get(shipment_id)
     if not shp:

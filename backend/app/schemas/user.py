@@ -1,10 +1,14 @@
+# backend/app/schemas/user.py
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 
 
 class UserRole(str, Enum):
-    employee = "employee"
     admin = "admin"
+    manager = "manager"
+    sales = "sales"
+    purchasing = "purchasing"
+    employee = "employee"
 
 
 class UserBase(BaseModel):

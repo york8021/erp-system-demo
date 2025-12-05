@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.api.deps import require_admin
+from app.api.deps import require_roles
 from app.models import Item, Customer, Vendor, Warehouse
+from app.models.user import User, UserRole
 from app.schemas.master import (
     ItemCreate,
     ItemUpdate,
@@ -21,11 +22,19 @@ from app.schemas.master import (
 
 router = APIRouter()
 
+ALLOWED_MASTER_ROLES = [
+    UserRole.admin,
+    UserRole.manager,
+]
+
 
 # ===== Items =====
 
 @router.get("/items", response_model=list[ItemOut])
-def list_items(db: Session = Depends(get_db)):
+def list_items(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(ALLOWED_MASTER_ROLES)),
+):
     return db.query(Item).all()
 
 
@@ -33,7 +42,7 @@ def list_items(db: Session = Depends(get_db)):
 def create_item(
     data: ItemCreate,
     db: Session = Depends(get_db),
-    _: object = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_MASTER_ROLES)),
 ):
     if db.query(Item).filter(Item.sku == data.sku).first():
         raise HTTPException(status_code=400, detail="SKU already exists")
@@ -50,7 +59,7 @@ def update_item(
     item_id: int,
     data: ItemUpdate,
     db: Session = Depends(get_db),
-    _: object = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_MASTER_ROLES)),
 ):
     item = db.query(Item).get(item_id)
     if not item:
@@ -68,7 +77,7 @@ def update_item(
 def delete_item(
     item_id: int,
     db: Session = Depends(get_db),
-    _: object = Depends(require_admin),
+    user: User = Depends(require_roles(ALLOWED_MASTER_ROLES)),
 ):
     item = db.query(Item).get(item_id)
     if not item:
