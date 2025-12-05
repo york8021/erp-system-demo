@@ -49,9 +49,9 @@ services:
     container_name: erp_frontend
     restart: unless-stopped
     env_file: .env
-    environment:
-      # 給前端使用的 API Base（程式裡用 process.env.NEXT_PUBLIC_API_BASE）
-      - NEXT_PUBLIC_API_BASE=http://192.168.1.103:8000
+    #environment:
+    # 給前端使用的 API Base（程式裡用 process.env.NEXT_PUBLIC_API_BASE）
+    #- NEXT_PUBLIC_API_BASE=http://192.168.1.103:8000
     depends_on:
       - backend
     ports:
