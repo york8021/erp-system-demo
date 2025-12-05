@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserOut
 from app.core.security import get_password_hash
 from app.api.deps import require_admin
@@ -11,40 +11,30 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserOut])
-def list_users(db: Session = Depends(get_db), user=Depends(require_admin)):
+def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
     return db.query(User).all()
 
 
 @router.post("/", response_model=UserOut)
-def create_user(
-    data: UserCreate,
-    db: Session = Depends(get_db),
-    user=Depends(require_admin)
-):
+def create_user(data: UserCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(400, "Email already exists")
 
-    new_user = User(
+    user = User(
         email=data.email,
         full_name=data.full_name,
         role=data.role,
         hashed_password=get_password_hash(data.password),
         is_active=data.is_active,
     )
-
-    db.add(new_user)
+    db.add(user)
     db.commit()
-    db.refresh(new_user)
-    return new_user
+    db.refresh(user)
+    return user
 
 
 @router.patch("/{user_id}", response_model=UserOut)
-def update_user(
-    user_id: int,
-    data: UserUpdate,
-    db: Session = Depends(get_db),
-    _=Depends(require_admin)
-):
+def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "User not found")

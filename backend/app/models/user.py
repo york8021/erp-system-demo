@@ -1,6 +1,7 @@
 import enum
 from sqlalchemy import String, Boolean, Enum
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 
@@ -9,8 +10,8 @@ class UserRole(str, enum.Enum):
     manager = "manager"
     sales = "sales"
     purchasing = "purchasing"
-    employee = "employee"  # 一般員工
-
+    employee = "employee"
+    
 
 class User(Base):
     __tablename__ = "users"
