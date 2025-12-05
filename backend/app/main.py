@@ -11,3 +11,11 @@ Base.metadata.create_all(bind=engine)
 init_admin()
 
 app.include_router(router, prefix="/api/v1")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
