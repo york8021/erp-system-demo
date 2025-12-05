@@ -1,17 +1,19 @@
-// frontend/pages/index.js
+// frontend/pages/index.jsx
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { useAuth } from "./_app";
 
-export default function Home({ token }) {
+export default function IndexPage() {
     const router = useRouter();
+    const { user } = useAuth();
 
     useEffect(() => {
-        if (token) {
+        if (user) {
             router.replace("/dashboard");
         } else {
             router.replace("/login");
         }
-    }, [token, router]);
+    }, [user, router]);
 
     return null;
 }
