@@ -1,9 +1,7 @@
-# backend/app/models/user.py
+import enum
 from sqlalchemy import String, Boolean, Enum
 from sqlalchemy.orm import Mapped, mapped_column
-import enum
-
-from app.db.base import Base
+from app.models.base import Base
 
 
 class UserRole(str, enum.Enum):
@@ -11,7 +9,7 @@ class UserRole(str, enum.Enum):
     manager = "manager"
     sales = "sales"
     purchasing = "purchasing"
-    employee = "employee"  # 保留原本角色，有需要可以當一般員工用
+    employee = "employee"  # 一般員工
 
 
 class User(Base):

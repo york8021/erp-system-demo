@@ -1,12 +1,10 @@
-# backend/app/core/security.py
-
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-from .config import get_settings
+from app.core.config import get_settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -21,13 +19,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(subject: str, role: str) -> str:
     """
-    建立 JWT access token，payload 會帶：
+    建立 JWT access token，payload 包含：
       - sub: 使用者 email
-      - role: 使用者角色（字串）
+      - role: 用於 RBAC
       - exp: 過期時間
     """
     settings = get_settings()
-
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.JWT_EXPIRE_MINUTES
     )
@@ -43,13 +40,13 @@ def create_access_token(subject: str, role: str) -> str:
 
 
 def decode_access_token(token: str) -> Optional[dict]:
+    """解 JWT，錯誤時回傳 None"""
     settings = get_settings()
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
         )
-        return payload
     except JWTError:
         return None

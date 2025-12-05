@@ -1,19 +1,13 @@
-# backend/app/api/deps.py
 from typing import Iterable
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import User, UserRole
 from app.core.security import decode_access_token
+from app.models.user import User, UserRole
 
 bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def get_db_dep():
-    return next(get_db())
 
 
 def get_current_user(
@@ -28,6 +22,7 @@ def get_current_user(
 
     token = credentials.credentials
     payload = decode_access_token(token)
+
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,7 +56,10 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
 
 
 def require_roles(allowed_roles: Iterable[UserRole]):
-    
+    """
+    通用權限檢查，可傳入多個允許角色：
+    Depends(require_roles([UserRole.admin, UserRole.manager]))
+    """
     def _dependency(user: User = Depends(get_current_user)) -> User:
         if user.role not in allowed_roles:
             raise HTTPException(

@@ -2,24 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.user import UserOut, UserCreate, UserUpdate
-from app.models import User, UserRole
+from app.models.user import User, UserRole
+from app.schemas.user import UserCreate, UserUpdate, UserOut
 from app.core.security import get_password_hash
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import require_admin
 
-router = APIRouter()
-
-
-@router.get("/me", response_model=UserOut)
-def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserOut])
-def list_users(
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-):
+def list_users(db: Session = Depends(get_db), user=Depends(require_admin)):
     return db.query(User).all()
 
 
@@ -27,22 +19,23 @@ def list_users(
 def create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    user=Depends(require_admin)
 ):
     if db.query(User).filter(User.email == data.email).first():
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(400, "Email already exists")
 
-    user = User(
+    new_user = User(
         email=data.email,
         full_name=data.full_name,
+        role=data.role,
         hashed_password=get_password_hash(data.password),
-        role=UserRole(data.role.value),
         is_active=data.is_active,
     )
-    db.add(user)
+
+    db.add(new_user)
     db.commit()
-    db.refresh(user)
-    return user
+    db.refresh(new_user)
+    return new_user
 
 
 @router.patch("/{user_id}", response_model=UserOut)
@@ -50,19 +43,19 @@ def update_user(
     user_id: int,
     data: UserUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _=Depends(require_admin)
 ):
-    user = db.query(User).get(user_id)
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(404, "User not found")
 
     if data.full_name is not None:
         user.full_name = data.full_name
     if data.role is not None:
-        user.role = UserRole(data.role.value)
+        user.role = data.role
     if data.is_active is not None:
         user.is_active = data.is_active
-    if data.password is not None:
+    if data.password:
         user.hashed_password = get_password_hash(data.password)
 
     db.commit()
