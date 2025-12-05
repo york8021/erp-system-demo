@@ -1,42 +1,17 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import get_settings
-from app.db.base import Base
-from app.db.session import engine, SessionLocal
 from app.api.v1.router import api_router
-from app.seed.initial_data import init_db
+from app.models.base import Base
+from app.db.session import engine
+from app.db.init_db import init_admin
 
-settings = get_settings()
+app = FastAPI(title="ERP Backend")
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-)
-
-# CORS
-origins = ["*"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 建表
+# 建立資料表
 Base.metadata.create_all(bind=engine)
 
-# 種子資料：admin 帳號
-with SessionLocal() as db:
-    init_db(db)
+# 初始化預設 admin（若不存在）
+init_admin()
 
-
-@app.get("/")
-def root():
-    return {"message": "ERP backend running"}
-
-
-# 掛上 v1 router
-app.include_router(api_router, prefix=settings.API_V1_STR)
+# API Router
+app.include_router(api_router, prefix="/api/v1")
