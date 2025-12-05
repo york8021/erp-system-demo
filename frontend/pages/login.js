@@ -4,8 +4,8 @@ import { useRouter } from "next/router";
 import { apiLogin } from "../lib/api";
 
 export default function Login({ token }) {
-    const [email, setEmail] = useState("admin@example.com");
-    const [password, setPassword] = useState("admin12345");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();

@@ -2,11 +2,26 @@
 
 // 後端 API 基底網址
 // 若有設定 NEXT_PUBLIC_API_BASE，就用環境變數；否則預設指向 localhost:8000
-const BASE =
-    (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000") + "/api/v1";
+function getBase() {
+    // 如果有環境變數，就優先用（正式環境會用這個）
+    if (process.env.NEXT_PUBLIC_API_BASE) {
+        return process.env.NEXT_PUBLIC_API_BASE + "/api/v1";
+    }
 
-// 共用 request 包裝
+    // 瀏覽器端：依照目前網址列的 hostname 來組 API 位址
+    if (typeof window !== "undefined") {
+        const host = window.location.hostname; // 例如 192.168.0.52
+        const port = 8000;
+        return `http://${host}:${port}/api/v1`;
+    }
+
+    // 開發 / SSR fallback
+    return "http://localhost:8000/api/v1";
+}
+
+// 把原本的 BASE 常數拿掉，改成每次 request 時算一次
 async function request(path, { method = "GET", token, body } = {}) {
+    const BASE = getBase();  // ⭐ 改這裡
     const headers = {
         "Content-Type": "application/json",
     };
@@ -31,13 +46,12 @@ async function request(path, { method = "GET", token, body } = {}) {
                     : data.detail;
             }
         } catch (_) {
-            // ignore parse error, keep default msg
+            // ignore
         }
         throw new Error(msg);
     }
 
     if (res.status === 204) return null;
-
     return res.json();
 }
 
