@@ -1,0 +1,72 @@
+services:
+  # ===================== DB：PostgreSQL =====================
+  db:
+    image: postgres:16-alpine
+    container_name: erp_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - erp_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks:
+      - internal
+
+  # ===================== Backend：ERP API =====================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: erp_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 給後端用的 DB URL（以 SQLAlchemy 為例）
+      DATABASE_URL: postgresql+psycopg://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000" # 開發用；正式可以只讓 proxy 存取
+    networks:
+      - internal
+      - public
+
+  # ===================== Frontend：Web ERP =====================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: erp_frontend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 給前端使用的 API Base（程式裡用 process.env.NEXT_PUBLIC_API_BASE）
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://backend:8000}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000" # Web 入口：http://localhost:3000
+    networks:
+      - public
+
+  # （未來如果要加 Traefik / Nginx 當反向代理，可以在這裡加 proxy 服務）
+
+volumes:
+  # Postgres 資料 volume：更新 backend/frontend 完全不會動到裡面的檔案
+  erp_db_data:
+
+networks:
+  internal:
+    internal: true
+  public:
+    driver: bridge
