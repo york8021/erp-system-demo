@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - ./frontend/.env.development
+      - ../frontend/.env.development
     #environment:
     # 給前端使用的 API Base（程式裡用 process.env.NEXT_PUBLIC_API_BASE）
     #- NEXT_PUBLIC_API_BASE=http://192.168.1.103:8000
