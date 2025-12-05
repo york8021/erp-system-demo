@@ -1,5 +1,6 @@
 # erp-system-demo
 ERP system (FastAPI + Next.js + PostgreSQL + Docker Compose)
+work by Chatgpt 5.1
 
 這只是我的學校專題
 專題結束後不一定會更新
